@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
-import { ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
+﻿import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { ApiBearerAuth, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 
+import { AuthGuard } from '../auth/auth.guard'
 import { ProductionMetricDetailDto } from './dto/metric-detail.dto'
 import {
   CreateProductionMetricCommentDto,
@@ -12,6 +13,8 @@ import { MiningStageMetricDto } from './dto/stage-metric.dto'
 import { ProductionStagesService } from './production-stages.service'
 
 @ApiTags('production-stages')
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller('production-stages')
 export class ProductionStagesController {
   constructor(private readonly productionStagesService: ProductionStagesService) {}
