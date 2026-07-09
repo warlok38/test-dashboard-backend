@@ -9,4 +9,7 @@ export class GraphPointDto {
 
   @ApiProperty({ nullable: true })
   plan!: number | null
+
+  @ApiProperty()
+  measure_unit!: string
 }
