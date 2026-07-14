@@ -1,8 +1,11 @@
-﻿import { ApiProperty } from '@nestjs/swagger'
+import { ApiProperty } from '@nestjs/swagger'
 
 export class SummaryIndicatorDetailDto {
   @ApiProperty()
   gtk_or_zif!: string
+
+  @ApiProperty()
+  display_name!: string
 
   @ApiProperty({ nullable: true })
   plan_value!: number | null

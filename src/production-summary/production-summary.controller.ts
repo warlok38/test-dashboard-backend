@@ -3,7 +3,13 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 
 import { AuthGuard } from '../auth/auth.guard'
 import { AlarmSummaryResponseDto } from './dto/alarm-summary-response.dto'
+import { GeneralSummaryQueryDto } from './dto/general-summary-query.dto'
+import { GeneralSummaryResponseDto } from './dto/general-summary-response.dto'
 import { GraphQueryDto } from './dto/graph-query.dto'
+import { GraphWithDetailsQueryDto } from './dto/graph-with-details-query.dto'
+import { GraphWithDetailsResponseDto } from './dto/graph-with-details-response.dto'
+import { GraphWithGtkQueryDto } from './dto/graph-with-gtk-query.dto'
+import { GraphWithGtkResponseDto } from './dto/graph-with-gtk-response.dto'
 import { GraphPointDto } from './dto/graph-point.dto'
 import { ProductionSummaryService } from './production-summary.service'
 
@@ -24,6 +30,24 @@ export class ProductionSummaryController {
   @ApiOkResponse({ type: AlarmSummaryResponseDto })
   findSummary(): AlarmSummaryResponseDto {
     return this.productionSummaryService.findSummary()
+  }
+
+  @Get('general/info')
+  @ApiOkResponse({ type: GeneralSummaryResponseDto })
+  findGeneralSummary(@Query() query: GeneralSummaryQueryDto): GeneralSummaryResponseDto {
+    return this.productionSummaryService.findGeneralSummary(query)
+  }
+
+  @Get('productivity/graph-with-gtk')
+  @ApiOkResponse({ type: GraphWithGtkResponseDto })
+  findGraphWithGtk(@Query() query: GraphWithGtkQueryDto): GraphWithGtkResponseDto {
+    return this.productionSummaryService.findGraphWithGtk(query)
+  }
+
+  @Get('productivity/graph-with-details')
+  @ApiOkResponse({ type: GraphWithDetailsResponseDto })
+  findGraphWithDetails(@Query() query: GraphWithDetailsQueryDto): GraphWithDetailsResponseDto {
+    return this.productionSummaryService.findGraphWithDetails(query)
   }
 
   @Get('graph')

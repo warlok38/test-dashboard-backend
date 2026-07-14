@@ -1,8 +1,9 @@
-﻿import type { AlarmSummaryResponseDto } from '../dto/alarm-summary-response.dto'
+import type { AlarmSummaryResponseDto } from '../dto/alarm-summary-response.dto'
 
 const details = [
   {
     gtk_or_zif: 'Олимпиада',
+    display_name: 'Олимпиада',
     plan_value: 271.74,
     fact_value: 257.9,
     deviation_pct: 5.2,
@@ -10,6 +11,7 @@ const details = [
   },
   {
     gtk_or_zif: 'Наталка',
+    display_name: 'Наталка',
     plan_value: 111.89,
     fact_value: 77.89,
     deviation_pct: -5.2,
@@ -17,6 +19,7 @@ const details = [
   },
   {
     gtk_or_zif: 'Благодатное',
+    display_name: 'Благодатное',
     plan_value: 81.89,
     fact_value: 86.15,
     deviation_pct: 5.2,
@@ -24,6 +27,7 @@ const details = [
   },
   {
     gtk_or_zif: 'Куранах',
+    display_name: 'Куранах',
     plan_value: 36.84,
     fact_value: 34.92,
     deviation_pct: -5.2,
@@ -31,6 +35,7 @@ const details = [
   },
   {
     gtk_or_zif: 'Сухой Лог',
+    display_name: 'Сухой Лог',
     plan_value: 12.99,
     fact_value: 13.67,
     deviation_pct: 5.2,
@@ -47,6 +52,7 @@ const enrichmentDetails = [
   'ВЗИФ'
 ].map((gtkOrZif, index) => ({
   gtk_or_zif: gtkOrZif,
+  display_name: gtkOrZif,
   plan_value: 271.74,
   fact_value: 257.9,
   deviation_pct: index === 1 || index === 3 ? -5.2 : 5.2,

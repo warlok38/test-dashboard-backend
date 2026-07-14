@@ -11,4 +11,7 @@ export class GraphQueryDto {
 
   @ApiPropertyOptional({ example: '2024-01-31' })
   date_to?: string
+
+  @ApiPropertyOptional({ example: 'Горная масса' })
+  indicator?: string
 }
