@@ -1,5 +1,12 @@
 import { ProductionSummaryService } from './production-summary.service'
 
+type GeneralSummaryGtkBreakdown = {
+  gtk_or_zif: string
+  fact_value: number
+  plan_value: number
+  deviation_pct: number
+}
+
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
@@ -87,6 +94,59 @@ describe('ProductionSummaryService', () => {
       monthSummary.cards[0].cards?.[0].fact_value
     )
   })
+
+  it('returns gtk breakdown only for drillable general summary cards', () => {
+    const daySummary = service.findGeneralSummary({
+      date_from: '2026-07-10',
+      date_to: '2026-07-10'
+    })
+    const weekSummary = service.findGeneralSummary({
+      date_from: '2026-07-01',
+      date_to: '2026-07-10'
+    })
+    const dayCards = daySummary.cards[0].cards ?? []
+    const weekCards = weekSummary.cards[0].cards ?? []
+    const drillingCard = dayCards.find((card) => card.indicator_name === 'Объем бурения') as
+      | ((typeof dayCards)[number] & { details?: GeneralSummaryGtkBreakdown[] | null })
+      | undefined
+    const miningMassCard = dayCards.find((card) => card.indicator_name === 'Горная масса') as
+      | ((typeof dayCards)[number] & { details?: GeneralSummaryGtkBreakdown[] | null })
+      | undefined
+    const turnoverCard = dayCards.find((card) => card.indicator_name === 'Грузооборот') as
+      | ((typeof dayCards)[number] & { details?: GeneralSummaryGtkBreakdown[] | null })
+      | undefined
+    const weekDrillingCard = weekCards.find((card) => card.indicator_name === 'Объем бурения') as
+      | ((typeof weekCards)[number] & { details?: GeneralSummaryGtkBreakdown[] | null })
+      | undefined
+
+    expect(drillingCard?.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          gtk_or_zif: 'Олимпиада',
+          fact_value: expect.any(Number),
+          plan_value: expect.any(Number),
+          deviation_pct: expect.any(Number)
+        })
+      ])
+    )
+    expect(miningMassCard?.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ gtk_or_zif: 'Наталка' }),
+        expect.objectContaining({ gtk_or_zif: 'Сухой Лог' })
+      ])
+    )
+    expect(turnoverCard?.details).toBeNull()
+    expect(weekDrillingCard?.details?.[0].fact_value).not.toBe(
+      drillingCard?.details?.[0].fact_value
+    )
+    expect(weekDrillingCard?.details?.[0].plan_value).not.toBe(
+      drillingCard?.details?.[0].plan_value
+    )
+    expect(weekDrillingCard?.details?.[0].deviation_pct).not.toBe(
+      drillingCard?.details?.[0].deviation_pct
+    )
+  })
+
   it('normalizes general summary shift query value', () => {
     const summary = service.findGeneralSummary({
       shift: '2' as unknown as number

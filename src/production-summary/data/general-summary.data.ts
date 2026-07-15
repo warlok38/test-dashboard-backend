@@ -1,12 +1,14 @@
 ﻿import type {
   GeneralSummaryCardDto,
+  GeneralSummaryGtkDto,
   GeneralSummaryResponseDto
 } from '../dto/general-summary-response.dto'
 
 type GeneralSummaryPeriod = 'day' | 'week' | 'month' | 'year'
 
-type GeneralSummarySeed = Omit<GeneralSummaryCardDto, 'cards'> & {
+type GeneralSummarySeed = Omit<GeneralSummaryCardDto, 'cards' | 'details'> & {
   cards?: GeneralSummarySeed[]
+  details?: GeneralSummaryGtkDto[]
 }
 
 const periodFactors: Record<GeneralSummaryPeriod, number> = {
@@ -36,6 +38,38 @@ const rootSeed: GeneralSummarySeed = {
       fact_value: 27.86,
       deviation_pct: 25.96,
       measure_unit: 'тыс. п.м.',
+      details: [
+        {
+          gtk_or_zif: 'Олимпиада',
+          plan_value: 7.18,
+          fact_value: 8.72,
+          deviation_pct: 21.45
+        },
+        {
+          gtk_or_zif: 'Наталка',
+          plan_value: 4.94,
+          fact_value: 6.13,
+          deviation_pct: 24.09
+        },
+        {
+          gtk_or_zif: 'Благодатное',
+          plan_value: 4.88,
+          fact_value: 5.9,
+          deviation_pct: 20.9
+        },
+        {
+          gtk_or_zif: 'Куранах',
+          plan_value: 3.14,
+          fact_value: 4.18,
+          deviation_pct: 33.12
+        },
+        {
+          gtk_or_zif: 'Сухой Лог',
+          plan_value: 1.98,
+          fact_value: 2.93,
+          deviation_pct: 47.98
+        }
+      ],
       cards: [
         {
           indicator_name: 'КИО бурового оборудования',
@@ -66,6 +100,38 @@ const rootSeed: GeneralSummarySeed = {
       fact_value: 674.99,
       deviation_pct: 2.65,
       measure_unit: 'тыс. м3',
+      details: [
+        {
+          gtk_or_zif: 'Олимпиада',
+          plan_value: 218.52,
+          fact_value: 224.18,
+          deviation_pct: 2.59
+        },
+        {
+          gtk_or_zif: 'Наталка',
+          plan_value: 142.26,
+          fact_value: 151.34,
+          deviation_pct: 6.38
+        },
+        {
+          gtk_or_zif: 'Благодатное',
+          plan_value: 124.68,
+          fact_value: 129.52,
+          deviation_pct: 3.88
+        },
+        {
+          gtk_or_zif: 'Куранах',
+          plan_value: 96.44,
+          fact_value: 92.11,
+          deviation_pct: -4.49
+        },
+        {
+          gtk_or_zif: 'Сухой Лог',
+          plan_value: 75.65,
+          fact_value: 77.84,
+          deviation_pct: 2.89
+        }
+      ],
       cards: [
         {
           indicator_name: 'Добыча руды',
@@ -157,12 +223,38 @@ function roundValue(value: number, fractionDigits = 2): number {
   return Number(value.toFixed(fractionDigits))
 }
 
-function scaleCard(card: GeneralSummarySeed, factor: number, deviationShift: number): GeneralSummaryCardDto {
-  const shouldScale = card.measure_unit !== '%' && card.measure_unit !== 'г/т' && card.measure_unit !== 'км'
+function scaleGtkBreakdown(
+  breakdown: GeneralSummaryGtkDto,
+  shouldScale: boolean,
+  factor: number,
+  deviationShift: number
+): GeneralSummaryGtkDto {
+  const deviationSign = breakdown.deviation_pct < 0 ? -1 : 1
+
+  return {
+    gtk_or_zif: breakdown.gtk_or_zif,
+    fact_value: shouldScale
+      ? roundValue(breakdown.fact_value * factor)
+      : roundValue(breakdown.fact_value),
+    plan_value: shouldScale
+      ? roundValue(breakdown.plan_value * factor)
+      : roundValue(breakdown.plan_value),
+    deviation_pct: roundValue(breakdown.deviation_pct + deviationSign * deviationShift)
+  }
+}
+
+function scaleCard(
+  card: GeneralSummarySeed,
+  factor: number,
+  deviationShift: number
+): GeneralSummaryCardDto {
+  const shouldScale =
+    card.measure_unit !== '%' && card.measure_unit !== 'г/т' && card.measure_unit !== 'км'
   const factValue = shouldScale ? roundValue(card.fact_value * factor) : roundValue(card.fact_value)
   const planValue = shouldScale ? roundValue(card.plan_value * factor) : roundValue(card.plan_value)
   const deviationSign = card.deviation_pct < 0 ? -1 : 1
-  const deviationValue = card.deviation_pct === -100 ? -100 : card.deviation_pct + deviationSign * deviationShift
+  const deviationValue =
+    card.deviation_pct === -100 ? -100 : card.deviation_pct + deviationSign * deviationShift
 
   return {
     indicator_name: card.indicator_name,
@@ -170,6 +262,10 @@ function scaleCard(card: GeneralSummarySeed, factor: number, deviationShift: num
     fact_value: factValue,
     deviation_pct: roundValue(deviationValue),
     measure_unit: card.measure_unit,
+    details:
+      card.details?.map((breakdown) =>
+        scaleGtkBreakdown(breakdown, shouldScale, factor, deviationShift)
+      ) ?? null,
     cards: card.cards?.map((child) => scaleCard(child, factor, deviationShift)) ?? null
   }
 }
