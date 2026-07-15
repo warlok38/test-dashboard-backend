@@ -204,7 +204,12 @@ describe('ProductionSummaryService', () => {
     })
     expect(response.details).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ indicator: 'Горная масса', gtk: 'Олимпиада', unit: 'тыс.м3' }),
+        expect.objectContaining({
+          indicator: 'Горная масса',
+          display_name: 'Олимпиада',
+          gtk: 'Олимпиада',
+          unit: 'тыс.м3'
+        }),
         expect.objectContaining({ indicator: 'Горная масса', gtk: 'Сухой Лог', unit: 'тыс.м3' }),
         expect.objectContaining({ indicator: 'Горная масса', gtk: 'КБЕ', unit: 'тыс.м3' })
       ])
@@ -239,6 +244,32 @@ describe('ProductionSummaryService', () => {
       '2026-06-01',
       '2026-07-01'
     ])
+  })
+
+  it('returns graph with gtk points for drilling detail indicators', () => {
+    const response = service.findGraphWithGtk({
+      indicator: 'КИО бурового оборудования',
+      period: 'day',
+      date_from: '2026-07-01',
+      date_to: '2026-07-03'
+    })
+
+    expect(response.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          indicator: 'КИО бурового оборудования',
+          gtk: 'Олимпиада',
+          unit: '%'
+        })
+      ])
+    )
+    expect(response.details[0].points[0]).toEqual(
+      expect.objectContaining({
+        measure_unit: '%',
+        fact: expect.any(Number),
+        plan: expect.any(Number)
+      })
+    )
   })
 
   it('returns graph with details for the selected indicator and range', () => {

@@ -21,6 +21,9 @@ export class GraphWithGtkDetailDto {
   @ApiProperty()
   gtk!: string
 
+  @ApiProperty({ nullable: true, required: false })
+  display_name?: string | null
+
   @ApiProperty()
   unit!: string
 

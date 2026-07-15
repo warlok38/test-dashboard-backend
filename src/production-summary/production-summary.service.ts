@@ -59,6 +59,14 @@ const GTK_GRAPH_CONFIGS: Record<string, GtkGraphConfig> = {
 }
 
 const GRAPH_WITH_GTK_ORDER = ['Олимпиада', 'Благодатное', 'Наталка', 'Куранах', 'Сухой Лог', 'КБЕ']
+const GRAPH_WITH_GTK_DISPLAY_NAMES: Record<string, string | null> = {
+  Олимпиада: 'Олимпиада',
+  Благодатное: 'Благодатное',
+  Наталка: 'Наталка',
+  Куранах: 'Куранах',
+  'Сухой Лог': 'Сухой Лог',
+  КБЕ: null
+}
 const GRAPH_WITH_DETAILS_CONFIGS: Record<string, DetailsGraphConfig[]> = {
   'Горная масса': [
     {
@@ -170,6 +178,27 @@ const GRAPH_INDICATOR_CONFIGS: Record<string, GraphIndicatorConfig> = {
     measureUnit: 'тыс. м3',
     planFactor: 0.8,
     planOffset: 15
+  },
+  'КИО бурового оборудования': {
+    factFactor: 0.04,
+    factOffset: 40,
+    measureUnit: '%',
+    planFactor: 0.04,
+    planOffset: 43
+  },
+  'КТГ бурового оборудования': {
+    factFactor: 0.025,
+    factOffset: 76,
+    measureUnit: '%',
+    planFactor: 0.024,
+    planOffset: 78
+  },
+  'Выход взорванной ГМ с 1 п.м.': {
+    factFactor: 0.025,
+    factOffset: 15,
+    measureUnit: 'м3/п.м.',
+    planFactor: 0.024,
+    planOffset: 17
   },
   Переработка: {
     factFactor: 0.28,
@@ -371,6 +400,7 @@ function createGraphWithGtkDetail(
   return {
     indicator,
     gtk,
+    display_name: GRAPH_WITH_GTK_DISPLAY_NAMES[gtk] ?? null,
     unit: measureUnit,
     points:
       gtkConfig.base === 0
