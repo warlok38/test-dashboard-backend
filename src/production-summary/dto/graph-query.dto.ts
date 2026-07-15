@@ -3,6 +3,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger'
 export type GraphPeriod = 'day' | 'month' | 'year'
 
 export class GraphQueryDto {
+  @ApiPropertyOptional({ example: 3 })
+  shift?: number
+
+  @ApiPropertyOptional({ example: '2026-07-01' })
+  production_date?: string
+
   @ApiPropertyOptional({ enum: ['day', 'month', 'year'], default: 'day' })
   period?: GraphPeriod
 

@@ -199,6 +199,7 @@ describe('ProductionSummaryService', () => {
 
     expect(response.metadata).toEqual({
       period: 'day',
+      production_date: '2026-07-13',
       start_date: '2026-07-01',
       end_date: '2026-07-13'
     })
@@ -246,6 +247,65 @@ describe('ProductionSummaryService', () => {
     ])
   })
 
+  it('returns a full July 2026 daily graph with empty future points for shift day', () => {
+    const points = service.findGraph({
+      indicator: 'Горная масса',
+      shift: 3,
+      production_date: '2026-07-01'
+    })
+
+    expect(points).toHaveLength(31)
+    expect(points[0]).toEqual(
+      expect.objectContaining({
+        date: '2026-07-01',
+        fact: expect.any(Number),
+        plan: expect.any(Number)
+      })
+    )
+    expect(points[13]).toEqual(
+      expect.objectContaining({
+        date: '2026-07-14',
+        fact: expect.any(Number),
+        plan: expect.any(Number)
+      })
+    )
+    expect(points[14]).toEqual({
+      date: '2026-07-15',
+      fact: null,
+      measure_unit: 'тыс. м3',
+      plan: null
+    })
+    expect(points.at(-1)).toEqual({
+      date: '2026-07-31',
+      fact: null,
+      measure_unit: 'тыс. м3',
+      plan: null
+    })
+  })
+
+  it('returns a full 2026 monthly graph for shift month', () => {
+    const points = service.findGraph({
+      indicator: 'Горная масса',
+      shift: 99,
+      production_date: '2026-01-01'
+    })
+
+    expect(points.map((point) => point.date)).toEqual([
+      '2026-01-01',
+      '2026-02-01',
+      '2026-03-01',
+      '2026-04-01',
+      '2026-05-01',
+      '2026-06-01',
+      '2026-07-01',
+      '2026-08-01',
+      '2026-09-01',
+      '2026-10-01',
+      '2026-11-01',
+      '2026-12-01'
+    ])
+  })
+
   it('returns graph with gtk points for drilling detail indicators', () => {
     const response = service.findGraphWithGtk({
       indicator: 'КИО бурового оборудования',
@@ -282,6 +342,7 @@ describe('ProductionSummaryService', () => {
 
     expect(response.metadata).toEqual({
       period: 'day',
+      production_date: '2026-07-13',
       start_date: '2026-07-01',
       end_date: '2026-07-13'
     })
@@ -352,6 +413,7 @@ describe('ProductionSummaryService', () => {
 
     expect(response.metadata).toEqual({
       period: 'day',
+      production_date: '2026-07-13',
       start_date: '2026-07-01',
       end_date: '2026-07-13'
     })

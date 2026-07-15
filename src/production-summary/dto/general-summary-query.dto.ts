@@ -10,6 +10,9 @@ export class GeneralSummaryQueryDto {
   @ApiPropertyOptional({ example: 3 })
   shift?: number
 
+  @ApiPropertyOptional({ example: '2026-07-01' })
+  production_date?: string
+
   @ApiPropertyOptional({ example: 'Олимпиада' })
   gtk?: string
 }

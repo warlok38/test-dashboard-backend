@@ -272,6 +272,7 @@ function scaleCard(
 
 function createGeneralSummaryMock(period: GeneralSummaryPeriod): GeneralSummaryResponseDto {
   return {
+    production_date: '2026-07-01',
     production_date_from: '2026-06-26',
     production_date_to: '2026-06-26',
     shift: 3,

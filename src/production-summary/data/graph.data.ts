@@ -1,6 +1,7 @@
 import type { GraphPointDto } from '../dto/graph-point.dto'
 
 export const GRAPH_DATA_START_DATE = '2024-01-01'
+export const GRAPH_DATA_END_DATE = '2026-07-14'
 export const GRAPH_MEASURE_UNIT = 'тыс. м3'
 
 function formatDate(date: Date): string {
@@ -16,8 +17,7 @@ function addDays(date: Date, days: number): Date {
 
 function createGraphMock(): GraphPointDto[] {
   const startDate = new Date(`${GRAPH_DATA_START_DATE}T00:00:00.000Z`)
-  const today = new Date()
-  const endDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
+  const endDate = new Date(`${GRAPH_DATA_END_DATE}T00:00:00.000Z`)
   const points: GraphPointDto[] = []
 
   for (

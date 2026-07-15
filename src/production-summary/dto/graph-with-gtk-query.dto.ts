@@ -6,6 +6,12 @@ export class GraphWithGtkQueryDto {
   @ApiProperty({ example: 'Горная масса' })
   indicator!: string
 
+  @ApiPropertyOptional({ example: 3 })
+  shift?: number
+
+  @ApiPropertyOptional({ example: '2026-07-01' })
+  production_date?: string
+
   @ApiPropertyOptional({ example: '2026-07-13' })
   date?: string
 

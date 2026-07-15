@@ -8,6 +8,9 @@ export class GraphWithGtkMetadataDto {
   period!: GraphPeriod
 
   @ApiProperty()
+  production_date!: string
+
+  @ApiProperty()
   start_date!: string
 
   @ApiProperty()

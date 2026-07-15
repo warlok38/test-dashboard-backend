@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 
 import { generalSummaryMock, generalSummaryMocks } from './data/general-summary.data'
-import { GRAPH_DATA_START_DATE, graphMock } from './data/graph.data'
+import { GRAPH_DATA_END_DATE, GRAPH_DATA_START_DATE, graphMock } from './data/graph.data'
 import { summaryMock } from './data/summary.data'
 import type { AlarmSummaryResponseDto } from './dto/alarm-summary-response.dto'
 import type { GeneralSummaryQueryDto } from './dto/general-summary-query.dto'
@@ -47,8 +47,11 @@ type DetailsGraphConfig = {
   wave: number
 }
 
-const GRAPH_WITH_GTK_DEFAULT_START_DATE = '2026-07-01'
-const GRAPH_WITH_GTK_DEFAULT_END_DATE = '2026-07-13'
+const GRAPH_WITH_GTK_DEFAULT_END_DATE = GRAPH_DATA_END_DATE
+const SHIFT_DAY = 3
+const SHIFT_MONTH = 99
+const SHIFT_YEAR = 100
+const DEFAULT_PRODUCTION_DATE = '2026-07-01'
 const GTK_GRAPH_CONFIGS: Record<string, GtkGraphConfig> = {
   Олимпиада: { base: 695, planOffset: 18, wave: 34 },
   Благодатное: { base: 360, planOffset: -8, wave: 22 },
@@ -298,6 +301,32 @@ function startOfYear(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
 }
 
+function endOfMonth(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0))
+}
+
+function endOfYear(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), 11, 31))
+}
+
+function getShiftPeriod(value: number | undefined): GraphPeriod | null {
+  const shift = Number(value)
+
+  if (shift === SHIFT_DAY) {
+    return 'day'
+  }
+
+  if (shift === SHIFT_MONTH) {
+    return 'month'
+  }
+
+  if (shift === SHIFT_YEAR) {
+    return 'year'
+  }
+
+  return null
+}
+
 function getDefaultStartDate(period: GraphPeriod, endDate: Date): Date {
   if (period === 'month') {
     return startOfYear(endDate)
@@ -310,6 +339,10 @@ function getDefaultStartDate(period: GraphPeriod, endDate: Date): Date {
   return startOfMonth(endDate)
 }
 
+function getDefaultProductionDate(): Date {
+  return parseDate(DEFAULT_PRODUCTION_DATE) ?? getToday()
+}
+
 function isGraphPeriod(value: string | undefined): value is GraphPeriod {
   return value === 'day' || value === 'month' || value === 'year'
 }
@@ -318,19 +351,66 @@ function isPrevQuery(value: boolean | string | undefined): boolean {
   return value === true || value === 'true'
 }
 
-function getGraphWithGtkRange(query: GraphWithGtkQueryDto, period: GraphPeriod) {
+type PeriodQuery = {
+  date?: string
+  date_from?: string
+  date_to?: string
+  period?: GraphPeriod
+  prev?: boolean | string
+  production_date?: string
+  shift?: number
+}
+
+function resolvePeriod(query: PeriodQuery): GraphPeriod {
+  return getShiftPeriod(query.shift) ?? (isGraphPeriod(query.period) ? query.period : 'day')
+}
+
+function getProductionDate(query: PeriodQuery): Date {
+  return parseDate(query.production_date) ?? getDefaultProductionDate()
+}
+
+function getPeriodRange(
+  query: PeriodQuery,
+  period: GraphPeriod
+): { endDate: Date; productionDate: Date; startDate: Date } {
+  const shiftPeriod = getShiftPeriod(query.shift)
+
+  if (shiftPeriod) {
+    const productionDate = getProductionDate(query)
+
+    if (shiftPeriod === 'year') {
+      const startDate = parseDate(GRAPH_DATA_START_DATE) ?? startOfYear(productionDate)
+      const endDate = endOfYear(parseDate(GRAPH_DATA_END_DATE) ?? productionDate)
+
+      return { startDate, endDate, productionDate }
+    }
+
+    if (shiftPeriod === 'month') {
+      return {
+        startDate: startOfYear(productionDate),
+        endDate: endOfYear(productionDate),
+        productionDate
+      }
+    }
+
+    return {
+      startDate: startOfMonth(productionDate),
+      endDate: endOfMonth(productionDate),
+      productionDate
+    }
+  }
+
   const singleDate = parseDate(query.date)
   const queryDateFrom = parseDate(query.date_from)
   const queryDateTo = parseDate(query.date_to)
-  const fallbackDateFrom = parseDate(GRAPH_WITH_GTK_DEFAULT_START_DATE) ?? getToday()
   const fallbackDateTo = parseDate(GRAPH_WITH_GTK_DEFAULT_END_DATE) ?? getToday()
 
   if (singleDate) {
-    return { startDate: singleDate, endDate: singleDate }
+    return { startDate: singleDate, endDate: singleDate, productionDate: singleDate }
   }
 
   const endDate = queryDateTo ?? queryDateFrom ?? fallbackDateTo
-  let startDate = queryDateFrom ?? fallbackDateFrom
+  let startDate = queryDateFrom ?? getDefaultStartDate(period, fallbackDateTo)
 
   if (isPrevQuery(query.prev)) {
     if (period === 'year') {
@@ -340,7 +420,9 @@ function getGraphWithGtkRange(query: GraphWithGtkQueryDto, period: GraphPeriod) 
     }
   }
 
-  return startDate > endDate ? { startDate: endDate, endDate } : { startDate, endDate }
+  return startDate > endDate
+    ? { startDate: endDate, endDate, productionDate: endDate }
+    : { startDate, endDate, productionDate: endDate }
 }
 
 function getGraphWithGtkPointDates(startDate: Date, endDate: Date, period: GraphPeriod): string[] {
@@ -366,6 +448,19 @@ function getGraphWithGtkPointDates(startDate: Date, endDate: Date, period: Graph
   }
 
   return dates
+}
+
+function isAfterDataEndDate(date: string): boolean {
+  return date > GRAPH_DATA_END_DATE
+}
+
+function createEmptyGraphPoint(date: string, measureUnit: string): GraphPointDto {
+  return {
+    date,
+    fact: null,
+    measure_unit: measureUnit,
+    plan: null
+  }
 }
 
 function getGtkGraphPointValue(
@@ -405,12 +500,16 @@ function createGraphWithGtkDetail(
     points:
       gtkConfig.base === 0
         ? []
-        : dates.map((date, index) => ({
-            date,
-            fact: getGtkGraphPointValue(gtkConfig, indicatorConfig, index, 'fact'),
-            plan: getGtkGraphPointValue(gtkConfig, indicatorConfig, index, 'plan'),
-            measure_unit: measureUnit
-          }))
+        : dates.map((date, index) =>
+            isAfterDataEndDate(date)
+              ? createEmptyGraphPoint(date, measureUnit)
+              : {
+                  date,
+                  fact: getGtkGraphPointValue(gtkConfig, indicatorConfig, index, 'fact'),
+                  plan: getGtkGraphPointValue(gtkConfig, indicatorConfig, index, 'plan'),
+                  measure_unit: measureUnit
+                }
+          )
   }
 }
 
@@ -444,12 +543,16 @@ function createGraphWithDetailsDetail(
   return {
     indicator: config.indicator,
     unit: config.unit,
-    points: dates.map((date, index) => ({
-      date,
-      fact: getDetailsGraphPointValue(config, gtkFactor, index, 'fact'),
-      plan: getDetailsGraphPointValue(config, gtkFactor, index, 'plan'),
-      measure_unit: config.unit
-    }))
+    points: dates.map((date, index) =>
+      isAfterDataEndDate(date)
+        ? createEmptyGraphPoint(date, config.unit)
+        : {
+            date,
+            fact: getDetailsGraphPointValue(config, gtkFactor, index, 'fact'),
+            plan: getDetailsGraphPointValue(config, gtkFactor, index, 'plan'),
+            measure_unit: config.unit
+          }
+    )
   }
 }
 
@@ -506,6 +609,42 @@ function getBucketDate(date: Date, period: GraphPeriod): string {
   return formatDate(date)
 }
 
+function aggregateGraphPoints(
+  points: GraphPointDto[],
+  period: GraphPeriod
+): Record<string, GraphPointDto> {
+  return points.reduce<Record<string, GraphPointDto>>((groups, point) => {
+    const date = parseDate(point.date)
+
+    if (!date) {
+      return groups
+    }
+
+    const bucketDate = getBucketDate(date, period)
+    const bucket = groups[bucketDate] ?? {
+      date: bucketDate,
+      fact: 0,
+      measure_unit: point.measure_unit,
+      plan: 0
+    }
+
+    bucket.fact = (bucket.fact ?? 0) + (point.fact ?? 0)
+    bucket.plan = (bucket.plan ?? 0) + (point.plan ?? 0)
+    bucket.measure_unit = point.measure_unit
+    groups[bucketDate] = bucket
+
+    return groups
+  }, {})
+}
+
+function getCompleteGraphPoints(
+  dates: string[],
+  groupedPoints: Record<string, GraphPointDto>,
+  measureUnit: string
+): GraphPointDto[] {
+  return dates.map((date) => groupedPoints[date] ?? createEmptyGraphPoint(date, measureUnit))
+}
+
 @Injectable()
 export class ProductionSummaryService {
   findGtk(): string[] {
@@ -518,9 +657,11 @@ export class ProductionSummaryService {
 
   findGeneralSummary(query: GeneralSummaryQueryDto = {}): GeneralSummaryResponseDto {
     const mock = getGeneralSummaryMock(query.date_from, query.date_to)
+    const productionDate = query.production_date ?? mock.production_date_from
 
     return {
       ...mock,
+      production_date: productionDate,
       production_date_from: query.date_from ?? mock.production_date_from,
       production_date_to: query.date_to ?? mock.production_date_to,
       shift: getShift(query.shift)
@@ -528,8 +669,8 @@ export class ProductionSummaryService {
   }
 
   findGraphWithGtk(query: GraphWithGtkQueryDto): GraphWithGtkResponseDto {
-    const period = isGraphPeriod(query.period) ? query.period : 'day'
-    const { startDate, endDate } = getGraphWithGtkRange(query, period)
+    const period = resolvePeriod(query)
+    const { startDate, endDate, productionDate } = getPeriodRange(query, period)
     const indicator = query.indicator ?? DEFAULT_GRAPH_INDICATOR
     const indicatorConfig = getGraphIndicatorConfig(indicator)
     const dates = getGraphWithGtkPointDates(startDate, endDate, period)
@@ -537,6 +678,7 @@ export class ProductionSummaryService {
     return {
       metadata: {
         period,
+        production_date: formatDate(productionDate),
         start_date: formatDate(startDate),
         end_date: formatDate(endDate)
       },
@@ -547,8 +689,8 @@ export class ProductionSummaryService {
   }
 
   findGraphWithDetails(query: GraphWithDetailsQueryDto): GraphWithDetailsResponseDto {
-    const period = isGraphPeriod(query.period) ? query.period : 'day'
-    const { startDate, endDate } = getGraphWithGtkRange(query, period)
+    const period = resolvePeriod(query)
+    const { startDate, endDate, productionDate } = getPeriodRange(query, period)
     const dates = getGraphWithGtkPointDates(startDate, endDate, period)
     const detailsConfig = GRAPH_WITH_DETAILS_CONFIGS[query.indicator] ?? []
     const gtkFactor = getGtkDetailsFactor(query.gtk)
@@ -556,6 +698,7 @@ export class ProductionSummaryService {
     return {
       metadata: {
         period,
+        production_date: formatDate(productionDate),
         start_date: formatDate(startDate),
         end_date: formatDate(endDate)
       },
@@ -566,11 +709,8 @@ export class ProductionSummaryService {
   }
 
   findGraph(query: GraphQueryDto = {}): GraphPointDto[] {
-    const period = isGraphPeriod(query.period) ? query.period : 'day'
-    const queryDateFrom = parseDate(query.date_from)
-    const queryDateTo = parseDate(query.date_to)
-    const endDate = queryDateTo ?? queryDateFrom ?? getToday()
-    const startDate = queryDateFrom ?? getDefaultStartDate(period, endDate)
+    const period = resolvePeriod(query)
+    const { startDate, endDate } = getPeriodRange(query, period)
 
     if (startDate > endDate) {
       return []
@@ -582,34 +722,9 @@ export class ProductionSummaryService {
     const filteredPoints = graphMock
       .filter((point) => point.date >= dateFrom && point.date <= dateTo)
       .map((point) => mapGraphPointToIndicator(point, indicatorConfig))
+    const groupedPoints = aggregateGraphPoints(filteredPoints, period)
+    const dates = getGraphWithGtkPointDates(startDate, endDate, period)
 
-    if (period === 'day') {
-      return filteredPoints
-    }
-
-    const groupedPoints = filteredPoints.reduce<Record<string, GraphPointDto>>((groups, point) => {
-      const date = parseDate(point.date)
-
-      if (!date) {
-        return groups
-      }
-
-      const bucketDate = getBucketDate(date, period)
-      const bucket = groups[bucketDate] ?? {
-        date: bucketDate,
-        fact: 0,
-        measure_unit: point.measure_unit,
-        plan: 0
-      }
-
-      bucket.fact = (bucket.fact ?? 0) + (point.fact ?? 0)
-      bucket.plan = (bucket.plan ?? 0) + (point.plan ?? 0)
-      bucket.measure_unit = point.measure_unit
-      groups[bucketDate] = bucket
-
-      return groups
-    }, {})
-
-    return Object.values(groupedPoints)
+    return getCompleteGraphPoints(dates, groupedPoints, indicatorConfig.measureUnit)
   }
 }

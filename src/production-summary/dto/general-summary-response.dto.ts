@@ -39,6 +39,9 @@ export class GeneralSummaryCardDto {
 
 export class GeneralSummaryResponseDto {
   @ApiProperty()
+  production_date!: string
+
+  @ApiProperty()
   production_date_from!: string
 
   @ApiProperty()
