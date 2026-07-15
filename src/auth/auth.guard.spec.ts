@@ -4,12 +4,27 @@ import type { ExecutionContext } from '@nestjs/common'
 import { AuthGuard } from './auth.guard'
 import { AuthService } from './auth.service'
 
+function createRequest(authorization?: string): {
+  headers: {
+    authorization?: string
+  }
+  user?: {
+    id: string
+    name: string
+    avatar: string | null
+  }
+} {
+  return {
+    headers: authorization ? { authorization } : {}
+  }
+}
+
 function createContext(authorization?: string): ExecutionContext {
+  const request = createRequest(authorization)
+
   return {
     switchToHttp: () => ({
-      getRequest: () => ({
-        headers: authorization ? { authorization } : {}
-      })
+      getRequest: () => request
     })
   } as ExecutionContext
 }
@@ -32,6 +47,26 @@ describe('AuthGuard', () => {
     const auth = authService.authorizeByKerb()
 
     expect(guard.canActivate(createContext(`Bearer ${auth.token}`))).toBe(true)
+  })
+
+  it('stores verified user on the request', () => {
+    const authService = new AuthService()
+    const guard = new AuthGuard(authService)
+    const auth = authService.authorizeByKerb()
+    const request = createRequest(`Bearer ${auth.token}`)
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => request
+      })
+    } as ExecutionContext
+
+    guard.canActivate(context)
+
+    expect(request.user).toEqual({
+      id: 'dev-user',
+      name: 'Товарищ Разработчик',
+      avatar: null
+    })
   })
 
   it('rejects requests without a bearer token', () => {

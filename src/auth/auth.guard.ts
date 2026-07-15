@@ -2,11 +2,13 @@
 
 import { throwConfiguredAuthDebugStatus } from './auth-debug'
 import { AuthService } from './auth.service'
+import type { AuthUser } from './types/auth-user'
 
 type RequestWithHeaders = {
   headers: {
     authorization?: string
   }
+  user?: AuthUser
 }
 
 @Injectable()
@@ -19,9 +21,17 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithHeaders>()
     const token = this.getBearerToken(request.headers.authorization)
 
-    if (!token || !this.authService.verifyToken(token)) {
+    if (!token) {
       throw new UnauthorizedException('Authorization token is missing or invalid')
     }
+
+    const user = this.authService.verifyToken(token)
+
+    if (!user) {
+      throw new UnauthorizedException('Authorization token is missing or invalid')
+    }
+
+    request.user = user
 
     return true
   }

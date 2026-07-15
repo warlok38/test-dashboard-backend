@@ -3,6 +3,7 @@
 import { AuthModule } from './auth/auth.module'
 import { BusinessUnitsModule } from './business-units/business-units.module'
 import { HealthModule } from './health/health.module'
+import { PermissionsModule } from './permissions/permissions.module'
 import { ProductionStagesModule } from './production-stages/production-stages.module'
 import { ProductionSummaryModule } from './production-summary/production-summary.module'
 
@@ -10,6 +11,7 @@ import { ProductionSummaryModule } from './production-summary/production-summary
   imports: [
     HealthModule,
     AuthModule,
+    PermissionsModule,
     BusinessUnitsModule,
     ProductionStagesModule,
     ProductionSummaryModule
