@@ -6,6 +6,9 @@ import { summaryMock } from './data/summary.data'
 import type { AlarmSummaryResponseDto } from './dto/alarm-summary-response.dto'
 import type { GeneralSummaryQueryDto } from './dto/general-summary-query.dto'
 import type { GeneralSummaryResponseDto } from './dto/general-summary-response.dto'
+import type { GraphByModeQueryDto, GraphMode } from './dto/graph-by-mode-query.dto'
+import type { GraphByModeDetailDto, GraphByModeResponseDto } from './dto/graph-by-mode-response.dto'
+import type { GraphMappingResponseDto } from './dto/graph-mapping-response.dto'
 import type { GraphPeriod, GraphQueryDto } from './dto/graph-query.dto'
 import type { GraphPointDto } from './dto/graph-point.dto'
 import type { GraphWithDetailsQueryDto } from './dto/graph-with-details-query.dto'
@@ -47,6 +50,13 @@ type DetailsGraphConfig = {
   wave: number
 }
 
+type ModeGraphConfig = {
+  base: number
+  label: string
+  planOffset: number
+  wave: number
+}
+
 const GRAPH_WITH_GTK_DEFAULT_END_DATE = GRAPH_DATA_END_DATE
 const SHIFT_DAY = 3
 const SHIFT_MONTH = 99
@@ -62,6 +72,7 @@ const GTK_GRAPH_CONFIGS: Record<string, GtkGraphConfig> = {
 }
 
 const GRAPH_WITH_GTK_ORDER = ['Олимпиада', 'Благодатное', 'Наталка', 'Куранах', 'Сухой Лог', 'КБЕ']
+const RELEASE_GRAPH_ZERO_FACT_DATES = new Set(['2026-07-05', '2026-07-10'])
 const GRAPH_WITH_GTK_DISPLAY_NAMES: Record<string, string | null> = {
   Олимпиада: 'Олимпиада',
   Благодатное: 'Благодатное',
@@ -99,7 +110,7 @@ const GRAPH_WITH_DETAILS_CONFIGS: Record<string, DetailsGraphConfig[]> = {
   ],
   'Объем бурения': [
     {
-      indicator: 'КИО бурового оборудования',
+      indicator: 'КИО Бурение',
       unit: '%',
       base: 62,
       planOffset: 4,
@@ -107,7 +118,7 @@ const GRAPH_WITH_DETAILS_CONFIGS: Record<string, DetailsGraphConfig[]> = {
       wave: 18
     },
     {
-      indicator: 'КТГ бурового оборудования',
+      indicator: 'КТГ Бурение',
       unit: '%',
       base: 84,
       planOffset: -3,
@@ -115,13 +126,161 @@ const GRAPH_WITH_DETAILS_CONFIGS: Record<string, DetailsGraphConfig[]> = {
       wave: 14
     },
     {
-      indicator: 'Выход взорванной ГМ с 1 п.м.',
-      unit: 'м3/п.м.',
+      indicator: 'Выход взорванной ГМ c 1 п.м.',
+      unit: 'м3./п.м.',
       base: 32,
       planOffset: 2,
       precision: 2,
       wave: 12
     }
+  ]
+}
+const GRAPH_MAPPING: GraphMappingResponseDto = {
+  'Добыча руды': [
+    {
+      indicator: 'Добыча руды',
+      unit: 'тыс т',
+      modes: ['stage', 'gtk']
+    },
+    {
+      indicator: 'Содержание в руде',
+      unit: 'г/т',
+      modes: ['gtk']
+    }
+  ],
+  'Объем бурения': [
+    {
+      indicator: 'Объем бурения',
+      unit: 'тыс.п.м.',
+      modes: ['gtk', 'park', 'stage']
+    },
+    {
+      indicator: 'КИО Бурение',
+      unit: '%',
+      modes: ['gtk', 'park', 'stage']
+    },
+    {
+      indicator: 'КТГ Бурение',
+      unit: '%',
+      modes: ['gtk', 'park', 'stage']
+    },
+    {
+      indicator: 'Выход взорванной ГМ c 1 п.м.',
+      unit: 'м3./п.м.',
+      modes: ['gtk']
+    }
+  ],
+  'Горная масса': [
+    {
+      indicator: 'Горная масса',
+      unit: 'тыс.м3',
+      modes: ['gtk', 'stage']
+    },
+    {
+      indicator: 'КИО Экскаваторы',
+      unit: '%',
+      modes: ['gtk', 'park', 'stage']
+    },
+    {
+      indicator: 'КТГ Экскаваторы',
+      unit: '%',
+      modes: ['gtk', 'park', 'stage']
+    },
+    {
+      indicator: 'Вскрыша',
+      unit: 'тыс.м3',
+      modes: ['gtk', 'stage']
+    }
+  ],
+  Грузооборот: [
+    {
+      indicator: 'Грузооборот',
+      unit: 'тыс.ткм',
+      modes: ['gtk', 'stage', 'park']
+    },
+    {
+      indicator: 'КИО Самосвалы',
+      unit: '%',
+      modes: ['gtk', 'park', 'stage']
+    },
+    {
+      indicator: 'КТГ Самосвалы',
+      unit: '%',
+      modes: ['gtk', 'park', 'stage']
+    },
+    {
+      indicator: 'Плечо',
+      unit: 'км',
+      modes: ['gtk', 'stage']
+    }
+  ],
+  'Выпуск Au': [
+    {
+      indicator: 'Выпуск Au',
+      unit: 'кг',
+      modes: ['gtk']
+    },
+    {
+      indicator: 'Переработка',
+      unit: 'тыс т',
+      modes: ['gtk']
+    },
+    {
+      indicator: 'Содержание Au',
+      unit: 'г/т',
+      modes: ['gtk']
+    },
+    {
+      indicator: 'Извлечение',
+      unit: '%',
+      modes: ['gtk']
+    }
+  ]
+}
+const GRAPH_INDICATOR_ALIASES: Record<string, string> = {
+  Выпуск: 'Выпуск Au',
+  'КИО бурового оборудования': 'КИО Бурение',
+  'КТГ бурового оборудования': 'КТГ Бурение',
+  'Выход взорванной ГМ с 1 п.м.': 'Выход взорванной ГМ c 1 п.м.',
+  'Выход взорванной ГМ с 1 п.м': 'Выход взорванной ГМ c 1 п.м.',
+  'КИО Самосвалов': 'КИО Самосвалы',
+  'КТГ Самосвалов': 'КТГ Самосвалы'
+}
+const MODE_GRAPH_CONFIGS: Record<GraphMode, ModeGraphConfig[]> = {
+  gtk: GRAPH_WITH_GTK_ORDER.map((gtk) => ({
+    label: gtk,
+    base: GTK_GRAPH_CONFIGS[gtk].base,
+    planOffset: GTK_GRAPH_CONFIGS[gtk].planOffset,
+    wave: GTK_GRAPH_CONFIGS[gtk].wave
+  })),
+  park: [
+    { label: 'CAT 994K', base: 10, planOffset: -1.5, wave: 8 },
+    { label: 'PC1250', base: 2.4, planOffset: 0.4, wave: 6 },
+    { label: 'WK-20', base: 13.5, planOffset: 0.8, wave: 7 },
+    { label: 'WK-35', base: 210, planOffset: 12, wave: 48 },
+    { label: 'ЭКГ-20', base: 14, planOffset: 1.2, wave: 9 }
+  ],
+  stage: [
+    { label: 'Бурение', base: 24, planOffset: 2, wave: 9 },
+    { label: 'Добыча', base: 180, planOffset: 8, wave: 34 },
+    { label: 'Транспортировка', base: 136, planOffset: -6, wave: 28 },
+    { label: 'Переработка', base: 96, planOffset: 5, wave: 18 }
+  ],
+  quarry: [
+    { label: 'Карьер Восточный', base: 68, planOffset: 4, wave: 18 },
+    { label: 'Карьер Западный', base: 54, planOffset: -2, wave: 15 },
+    { label: 'Карьер Центральный', base: 82, planOffset: 3, wave: 21 }
+  ],
+  parkPercent: [
+    { label: 'Парк 90%+', base: 88, planOffset: 2, wave: 8 },
+    { label: 'Парк 70-90%', base: 76, planOffset: 1, wave: 10 },
+    { label: 'Парк до 70%', base: 62, planOffset: -1, wave: 12 }
+  ],
+  block: [
+    { label: 'Блок 1', base: 44, planOffset: 3, wave: 12 },
+    { label: 'Блок 2', base: 39, planOffset: -2, wave: 10 },
+    { label: 'Блок 3', base: 51, planOffset: 1, wave: 14 },
+    { label: 'Блок 4', base: 32, planOffset: 2, wave: 11 }
   ]
 }
 const GTK_DETAIL_FACTORS: Record<string, number> = {
@@ -154,7 +313,7 @@ const GRAPH_INDICATOR_CONFIGS: Record<string, GraphIndicatorConfig> = {
     planFactor: 14.2,
     planOffset: 450
   },
-  Выпуск: {
+  'Выпуск Au': {
     factFactor: 0.18,
     factOffset: 3.5,
     measureUnit: 'кг',
@@ -182,26 +341,61 @@ const GRAPH_INDICATOR_CONFIGS: Record<string, GraphIndicatorConfig> = {
     planFactor: 0.8,
     planOffset: 15
   },
-  'КИО бурового оборудования': {
+  'КИО Бурение': {
     factFactor: 0.04,
     factOffset: 40,
     measureUnit: '%',
     planFactor: 0.04,
     planOffset: 43
   },
-  'КТГ бурового оборудования': {
+  'КТГ Бурение': {
     factFactor: 0.025,
     factOffset: 76,
     measureUnit: '%',
     planFactor: 0.024,
     planOffset: 78
   },
-  'Выход взорванной ГМ с 1 п.м.': {
+  'Выход взорванной ГМ c 1 п.м.': {
     factFactor: 0.025,
     factOffset: 15,
-    measureUnit: 'м3/п.м.',
+    measureUnit: 'м3./п.м.',
     planFactor: 0.024,
     planOffset: 17
+  },
+  'КИО Экскаваторы': {
+    factFactor: 0.04,
+    factOffset: 42,
+    measureUnit: '%',
+    planFactor: 0.04,
+    planOffset: 44
+  },
+  'КТГ Экскаваторы': {
+    factFactor: 0.025,
+    factOffset: 78,
+    measureUnit: '%',
+    planFactor: 0.024,
+    planOffset: 80
+  },
+  'КИО Самосвалы': {
+    factFactor: 0.04,
+    factOffset: 45,
+    measureUnit: '%',
+    planFactor: 0.04,
+    planOffset: 46
+  },
+  'КТГ Самосвалы': {
+    factFactor: 0.025,
+    factOffset: 79,
+    measureUnit: '%',
+    planFactor: 0.024,
+    planOffset: 80
+  },
+  Плечо: {
+    factFactor: 0.016,
+    factOffset: 6,
+    measureUnit: 'км',
+    planFactor: 0.015,
+    planOffset: 6.2
   },
   Переработка: {
     factFactor: 0.28,
@@ -230,26 +424,53 @@ function roundGraphValue(value: number): number {
 }
 
 function getGraphIndicatorConfig(indicator: string | undefined): GraphIndicatorConfig {
+  const normalizedIndicator = normalizeGraphIndicator(indicator)
+
   return (
-    GRAPH_INDICATOR_CONFIGS[indicator ?? DEFAULT_GRAPH_INDICATOR] ??
+    GRAPH_INDICATOR_CONFIGS[normalizedIndicator ?? DEFAULT_GRAPH_INDICATOR] ??
     GRAPH_INDICATOR_CONFIGS[DEFAULT_GRAPH_INDICATOR]
   )
+}
+
+function normalizeGraphIndicator(indicator: string | undefined): string | undefined {
+  if (!indicator) {
+    return indicator
+  }
+
+  return GRAPH_INDICATOR_ALIASES[indicator] ?? indicator
 }
 
 function getGraphWithGtkMeasureUnit(measureUnit: string): string {
   return measureUnit.replace('тыс. м3', 'тыс.м3').replace('тыс. т', 'тыс.т')
 }
 
+function getGraphFactValue(
+  point: GraphPointDto,
+  indicator: string | undefined,
+  config: GraphIndicatorConfig
+): number | null {
+  if (point.fact === null) {
+    return null
+  }
+
+  if (
+    normalizeGraphIndicator(indicator) === 'Выпуск Au' &&
+    RELEASE_GRAPH_ZERO_FACT_DATES.has(point.date)
+  ) {
+    return 0
+  }
+
+  return roundGraphValue(point.fact * config.factFactor + config.factOffset)
+}
+
 function mapGraphPointToIndicator(
   point: GraphPointDto,
+  indicator: string | undefined,
   config: GraphIndicatorConfig
 ): GraphPointDto {
   return {
     date: point.date,
-    fact:
-      point.fact === null
-        ? null
-        : roundGraphValue(point.fact * config.factFactor + config.factOffset),
+    fact: getGraphFactValue(point, indicator, config),
     measure_unit: config.measureUnit,
     plan:
       point.plan === null
@@ -556,6 +777,56 @@ function createGraphWithDetailsDetail(
   }
 }
 
+function getGraphMappingUnit(indicator: string): string | undefined {
+  return Object.values(GRAPH_MAPPING)
+    .flat()
+    .find((item) => item.indicator === indicator)?.unit
+}
+
+function getModeGraphPointValue(
+  config: ModeGraphConfig,
+  indicatorConfig: GraphIndicatorConfig,
+  gtkFactor: number,
+  index: number,
+  series: 'fact' | 'plan'
+): number {
+  const waveOffset = config.wave === 0 ? 0 : ((index * 19) % config.wave) - config.wave / 2
+  const planAdjustment = series === 'plan' ? config.planOffset + ((index * 13) % 17) - 8 : 0
+  const seriesAdjustment = series === 'fact' ? ((index * 7) % 11) - 5 : planAdjustment
+  const indicatorFactor =
+    series === 'fact' ? indicatorConfig.factFactor : indicatorConfig.planFactor
+  const indicatorOffset =
+    series === 'fact' ? indicatorConfig.factOffset : indicatorConfig.planOffset
+  const value = (config.base + waveOffset + seriesAdjustment) * gtkFactor
+
+  return roundGraphValue(Math.max(value * indicatorFactor + indicatorOffset, 0))
+}
+
+function createModeGraphDetail(
+  config: ModeGraphConfig,
+  indicator: string,
+  indicatorConfig: GraphIndicatorConfig,
+  dates: string[],
+  unit: string,
+  gtkFactor: number
+): GraphByModeDetailDto {
+  return {
+    indicator,
+    gtk: config.label,
+    unit,
+    points: dates.map((date, index) =>
+      isAfterDataEndDate(date)
+        ? createEmptyGraphPoint(date, unit)
+        : {
+            date,
+            fact: getModeGraphPointValue(config, indicatorConfig, gtkFactor, index, 'fact'),
+            plan: getModeGraphPointValue(config, indicatorConfig, gtkFactor, index, 'plan'),
+            measure_unit: unit
+          }
+    )
+  }
+}
+
 function getDateDiffInDays(dateFrom: Date, dateTo: Date): number {
   const millisecondsPerDay = 24 * 60 * 60 * 1000
 
@@ -668,10 +939,67 @@ export class ProductionSummaryService {
     }
   }
 
+  findGraphMapping(): GraphMappingResponseDto {
+    return GRAPH_MAPPING
+  }
+
+  findGraphByMode(query: GraphByModeQueryDto): GraphByModeResponseDto {
+    const period = resolvePeriod(query)
+    const { startDate, endDate } = getPeriodRange(query, period)
+    const indicator = normalizeGraphIndicator(query.indicator) ?? DEFAULT_GRAPH_INDICATOR
+    const indicatorConfig = getGraphIndicatorConfig(indicator)
+    const unit =
+      getGraphMappingUnit(indicator) ?? getGraphWithGtkMeasureUnit(indicatorConfig.measureUnit)
+    const dates = getGraphWithGtkPointDates(startDate, endDate, period)
+    const metadata = {
+      period,
+      start_date: formatDate(startDate),
+      end_date: formatDate(endDate),
+      shift: getShift(query.shift),
+      gtk: query.gtk_name ?? ''
+    }
+
+    if (!query.mode) {
+      const points = this.findGraph({
+        indicator,
+        shift: query.shift,
+        production_date: query.production_date,
+        period,
+        date_from: query.date_from,
+        date_to: query.date_to
+      })
+
+      return {
+        metadata,
+        details: [
+          {
+            indicator,
+            gtk: '',
+            unit,
+            points: points.map((point) => ({
+              ...point,
+              measure_unit: unit
+            }))
+          }
+        ]
+      }
+    }
+
+    const gtkFactor = getGtkDetailsFactor(query.gtk_name)
+    const modeConfigs = MODE_GRAPH_CONFIGS[query.mode] ?? []
+
+    return {
+      metadata,
+      details: modeConfigs.map((modeConfig) =>
+        createModeGraphDetail(modeConfig, indicator, indicatorConfig, dates, unit, gtkFactor)
+      )
+    }
+  }
+
   findGraphWithGtk(query: GraphWithGtkQueryDto): GraphWithGtkResponseDto {
     const period = resolvePeriod(query)
     const { startDate, endDate, productionDate } = getPeriodRange(query, period)
-    const indicator = query.indicator ?? DEFAULT_GRAPH_INDICATOR
+    const indicator = normalizeGraphIndicator(query.indicator) ?? DEFAULT_GRAPH_INDICATOR
     const indicatorConfig = getGraphIndicatorConfig(indicator)
     const dates = getGraphWithGtkPointDates(startDate, endDate, period)
 
@@ -692,7 +1020,8 @@ export class ProductionSummaryService {
     const period = resolvePeriod(query)
     const { startDate, endDate, productionDate } = getPeriodRange(query, period)
     const dates = getGraphWithGtkPointDates(startDate, endDate, period)
-    const detailsConfig = GRAPH_WITH_DETAILS_CONFIGS[query.indicator] ?? []
+    const indicator = normalizeGraphIndicator(query.indicator) ?? DEFAULT_GRAPH_INDICATOR
+    const detailsConfig = GRAPH_WITH_DETAILS_CONFIGS[indicator] ?? []
     const gtkFactor = getGtkDetailsFactor(query.gtk)
 
     return {
@@ -721,7 +1050,7 @@ export class ProductionSummaryService {
     const indicatorConfig = getGraphIndicatorConfig(query.indicator)
     const filteredPoints = graphMock
       .filter((point) => point.date >= dateFrom && point.date <= dateTo)
-      .map((point) => mapGraphPointToIndicator(point, indicatorConfig))
+      .map((point) => mapGraphPointToIndicator(point, query.indicator, indicatorConfig))
     const groupedPoints = aggregateGraphPoints(filteredPoints, period)
     const dates = getGraphWithGtkPointDates(startDate, endDate, period)
 

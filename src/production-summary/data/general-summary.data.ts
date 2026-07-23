@@ -72,21 +72,21 @@ const rootSeed: GeneralSummarySeed = {
       ],
       cards: [
         {
-          indicator_name: 'КИО бурового оборудования',
+          indicator_name: 'КИО Бурение',
           plan_value: 55.8,
           fact_value: 62.9,
           deviation_pct: 7.11,
           measure_unit: '%'
         },
         {
-          indicator_name: 'КТГ бурового оборудования',
+          indicator_name: 'КТГ Бурение',
           plan_value: 55.8,
           fact_value: 84.5,
           deviation_pct: 7.11,
           measure_unit: '%'
         },
         {
-          indicator_name: 'Выход взорванной ГМ с 1 п.м',
+          indicator_name: 'Выход взорванной ГМ c 1 п.м.',
           plan_value: 33.28,
           fact_value: 0,
           deviation_pct: -100,
@@ -164,14 +164,14 @@ const rootSeed: GeneralSummarySeed = {
       measure_unit: 'тыс. ткм',
       cards: [
         {
-          indicator_name: 'КИО Самосвалов',
+          indicator_name: 'КИО Самосвалы',
           plan_value: 75.2,
           fact_value: 74.2,
           deviation_pct: -1.03,
           measure_unit: '%'
         },
         {
-          indicator_name: 'КТГ Самосвалов',
+          indicator_name: 'КТГ Самосвалы',
           plan_value: 84.6,
           fact_value: 84.3,
           deviation_pct: -0.33,
@@ -187,7 +187,7 @@ const rootSeed: GeneralSummarySeed = {
       ]
     },
     {
-      indicator_name: 'Выпуск',
+      indicator_name: 'Выпуск Au',
       plan_value: 199.56,
       fact_value: 172.45,
       deviation_pct: -13.6,

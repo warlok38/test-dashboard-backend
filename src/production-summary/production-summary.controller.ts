@@ -5,6 +5,9 @@ import { AuthGuard } from '../auth/auth.guard'
 import { AlarmSummaryResponseDto } from './dto/alarm-summary-response.dto'
 import { GeneralSummaryQueryDto } from './dto/general-summary-query.dto'
 import { GeneralSummaryResponseDto } from './dto/general-summary-response.dto'
+import { GraphByModeQueryDto } from './dto/graph-by-mode-query.dto'
+import { GraphByModeResponseDto } from './dto/graph-by-mode-response.dto'
+import { type GraphMappingResponseDto } from './dto/graph-mapping-response.dto'
 import { GraphQueryDto } from './dto/graph-query.dto'
 import { GraphWithDetailsQueryDto } from './dto/graph-with-details-query.dto'
 import { GraphWithDetailsResponseDto } from './dto/graph-with-details-response.dto'
@@ -36,6 +39,18 @@ export class ProductionSummaryController {
   @ApiOkResponse({ type: GeneralSummaryResponseDto })
   findGeneralSummary(@Query() query: GeneralSummaryQueryDto): GeneralSummaryResponseDto {
     return this.productionSummaryService.findGeneralSummary(query)
+  }
+
+  @Get('productivity/graph-mapping')
+  @ApiOkResponse({ description: 'Graph tabs and available detail modes by indicator' })
+  findGraphMapping(): GraphMappingResponseDto {
+    return this.productionSummaryService.findGraphMapping()
+  }
+
+  @Get('productivity/graph-by-mode')
+  @ApiOkResponse({ type: GraphByModeResponseDto })
+  findGraphByMode(@Query() query: GraphByModeQueryDto): GraphByModeResponseDto {
+    return this.productionSummaryService.findGraphByMode(query)
   }
 
   @Get('productivity/graph-with-gtk')
