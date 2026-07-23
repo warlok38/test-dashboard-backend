@@ -64,7 +64,7 @@ describe('ProductionSummaryService', () => {
         expect.objectContaining({ indicator_name: 'Объем бурения', measure_unit: 'тыс. п.м.' }),
         expect.objectContaining({ indicator_name: 'Горная масса', measure_unit: 'тыс. м3' }),
         expect.objectContaining({ indicator_name: 'Грузооборот', measure_unit: 'тыс. ткм' }),
-        expect.objectContaining({ indicator_name: 'Выпуск', measure_unit: 'кг' })
+        expect.objectContaining({ indicator_name: 'Выпуск Au', measure_unit: 'кг' })
       ])
     )
     expect(summary.cards[0].cards?.flatMap((card) => card.cards ?? [])).toEqual(
@@ -188,6 +188,130 @@ describe('ProductionSummaryService', () => {
     expect(oreMiningPoints[0].measure_unit).toBe('тыс. т')
     expect(miningMassPoints[0].fact).not.toBe(oreMiningPoints[0].fact)
   })
+  it('returns zero fact points for release graph only', () => {
+    const releasePoints = service.findGraph({
+      indicator: 'Выпуск',
+      period: 'day',
+      date_from: '2026-07-01',
+      date_to: '2026-07-14'
+    })
+    const miningMassPoints = service.findGraph({
+      indicator: 'Горная масса',
+      period: 'day',
+      date_from: '2026-07-01',
+      date_to: '2026-07-14'
+    })
+
+    expect(releasePoints.filter((point) => point.fact === 0).map((point) => point.date)).toEqual([
+      '2026-07-05',
+      '2026-07-10'
+    ])
+    expect(releasePoints.find((point) => point.date === '2026-07-05')?.plan).not.toBe(0)
+    expect(miningMassPoints.find((point) => point.date === '2026-07-05')?.fact).not.toBe(0)
+  })
+
+  it('returns graph mapping for all top-level indicators', () => {
+    const mapping = service.findGraphMapping()
+
+    expect(mapping['Горная масса']).toEqual([
+      { indicator: 'Горная масса', unit: 'тыс.м3', modes: ['gtk', 'stage'] },
+      { indicator: 'КИО Экскаваторы', unit: '%', modes: ['gtk', 'park', 'stage'] },
+      { indicator: 'КТГ Экскаваторы', unit: '%', modes: ['gtk', 'park', 'stage'] },
+      { indicator: 'Вскрыша', unit: 'тыс.м3', modes: ['gtk', 'stage'] }
+    ])
+    expect(mapping['Выпуск Au']?.[0]).toEqual({
+      indicator: 'Выпуск Au',
+      unit: 'кг',
+      modes: ['gtk']
+    })
+  })
+
+  it('returns graph by mode main graph without mode', () => {
+    const response = service.findGraphByMode({
+      indicator: 'Горная масса',
+      shift: 3,
+      production_date: '2026-07-01'
+    })
+
+    expect(response.metadata).toEqual({
+      period: 'day',
+      start_date: '2026-07-01',
+      end_date: '2026-07-31',
+      shift: 3,
+      gtk: ''
+    })
+    expect(response.details).toHaveLength(1)
+    expect(response.details[0]).toEqual(
+      expect.objectContaining({
+        indicator: 'Горная масса',
+        gtk: '',
+        unit: 'тыс.м3'
+      })
+    )
+    expect(response.details[0].points).toHaveLength(31)
+  })
+
+  it('returns graph by mode gtk details', () => {
+    const response = service.findGraphByMode({
+      indicator: 'Горная масса',
+      mode: 'gtk',
+      shift: 3,
+      production_date: '2026-07-01'
+    })
+
+    expect(response.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ indicator: 'Горная масса', gtk: 'Олимпиада', unit: 'тыс.м3' }),
+        expect.objectContaining({ indicator: 'Горная масса', gtk: 'Сухой Лог', unit: 'тыс.м3' })
+      ])
+    )
+  })
+
+  it('returns graph by mode park details', () => {
+    const response = service.findGraphByMode({
+      indicator: 'Горная масса',
+      mode: 'park',
+      shift: 3,
+      production_date: '2026-07-01'
+    })
+
+    expect(response.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ indicator: 'Горная масса', gtk: 'CAT 994K', unit: 'тыс.м3' }),
+        expect.objectContaining({ indicator: 'Горная масса', gtk: 'PC1250', unit: 'тыс.м3' })
+      ])
+    )
+    expect(response.details[0].points[0]).toEqual(
+      expect.objectContaining({
+        date: '2026-07-01',
+        fact: expect.any(Number),
+        plan: expect.any(Number)
+      })
+    )
+  })
+
+  it('applies gtk_name factor to graph by mode details', () => {
+    const olimpiadaResponse = service.findGraphByMode({
+      indicator: 'Горная масса',
+      mode: 'park',
+      gtk_name: 'Олимпиада',
+      shift: 3,
+      production_date: '2026-07-01'
+    })
+    const natalkaResponse = service.findGraphByMode({
+      indicator: 'Горная масса',
+      mode: 'park',
+      gtk_name: 'Наталка',
+      shift: 3,
+      production_date: '2026-07-01'
+    })
+
+    expect(olimpiadaResponse.metadata.gtk).toBe('Олимпиада')
+    expect(natalkaResponse.metadata.gtk).toBe('Наталка')
+    expect(olimpiadaResponse.details[0].points[0].fact).not.toBe(
+      natalkaResponse.details[0].points[0].fact
+    )
+  })
 
   it('returns graph with gtk details for the selected indicator and range', () => {
     const response = service.findGraphWithGtk({
@@ -308,7 +432,7 @@ describe('ProductionSummaryService', () => {
 
   it('returns graph with gtk points for drilling detail indicators', () => {
     const response = service.findGraphWithGtk({
-      indicator: 'КИО бурового оборудования',
+      indicator: 'КИО Бурение',
       period: 'day',
       date_from: '2026-07-01',
       date_to: '2026-07-03'
@@ -317,7 +441,7 @@ describe('ProductionSummaryService', () => {
     expect(response.details).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          indicator: 'КИО бурового оборудования',
+          indicator: 'КИО Бурение',
           gtk: 'Олимпиада',
           unit: '%'
         })
